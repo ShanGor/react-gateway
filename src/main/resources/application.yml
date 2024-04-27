@@ -2,3 +2,11 @@ spring:
   application:
     name: react-gateway
 
+server:
+  compression:
+    enabled: true
+
+gateway:
+  static-file-path: c:/tmp/hey
+  default-file: index.html
+  spa-path: /ui
