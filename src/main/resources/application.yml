@@ -7,6 +7,10 @@ server:
     enabled: true
 
 gateway:
-  static-file-path: c:/tmp/hey
+  static-file-path: D:/sources/git/js/ai-chat-ui/dist
   default-file: index.html
   spa-path: /ui
+
+ai:
+  ollama:
+    url: http://localhost:11434/api/generate
