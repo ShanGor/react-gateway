@@ -8,12 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
@@ -50,9 +48,9 @@ public class OllamaProxyController {
 
         WebClient.RequestBodySpec client;
         if (stream) {
-            client = WebClient.create(ollamaUrl).post().header("Content-Type", "text/stream-event;charset=utf-8");
+            client = WebClient.create(ollamaUrl).post().uri("/api/generate").header("Content-Type", "text/stream-event;charset=utf-8");
         } else {
-            client = WebClient.create(ollamaUrl).post().header("Content-Type", "application/json;charset=utf-8");
+            client = WebClient.create(ollamaUrl).post().uri("/api/generate").header("Content-Type", "application/json;charset=utf-8");
         }
         for (var entry : request.getHeaders().entrySet()) {
             client = client.header(entry.getKey(), entry.getValue().get(0));
@@ -61,6 +59,11 @@ public class OllamaProxyController {
                 .retrieve()
                 .bodyToFlux(OllamaChatCompletion.class)
                 .map(ollamaChatCompletion -> ServerSentEvent.builder(ollamaChatCompletion).build());
+    }
+
+    @GetMapping(value = "/api/tags", produces = "application/json")
+    public Mono<String> listModels() {
+        return WebClient.create(ollamaUrl).get().uri("/api/tags").retrieve().bodyToMono(String.class);
     }
 
     @Data
