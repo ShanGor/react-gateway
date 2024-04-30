@@ -3,7 +3,6 @@ package io.github.shangor.gateway;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.codec.ServerSentEvent;
@@ -13,7 +12,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,7 +30,7 @@ public class OllamaProxyController {
      * @return
      */
     @PostMapping("/chat/ollama")
-    public Flux<ServerSentEvent<OllamaChatCompletion>> chat(@RequestBody String requestText, ServerHttpRequest request) {
+    public Flux<ServerSentEvent<String>> chat(@RequestBody String requestText, ServerHttpRequest request) {
         Boolean stream;
         try {
             var m = objectMapper.readValue(requestText, Map.class);
@@ -48,36 +46,21 @@ public class OllamaProxyController {
 
         WebClient.RequestBodySpec client;
         if (stream) {
-            client = WebClient.create(ollamaUrl).post().uri("/api/generate").header("Content-Type", "text/stream-event;charset=utf-8");
+            client = WebClient.create(ollamaUrl).post().uri("/api/chat").header("Content-Type", "text/stream-event;charset=utf-8");
         } else {
-            client = WebClient.create(ollamaUrl).post().uri("/api/generate").header("Content-Type", "application/json;charset=utf-8");
+            client = WebClient.create(ollamaUrl).post().uri("/api/chat").header("Content-Type", "application/json;charset=utf-8");
         }
         for (var entry : request.getHeaders().entrySet()) {
             client = client.header(entry.getKey(), entry.getValue().get(0));
         }
         return client.bodyValue(requestText)
                 .retrieve()
-                .bodyToFlux(OllamaChatCompletion.class)
+                .bodyToFlux(String.class)
                 .map(ollamaChatCompletion -> ServerSentEvent.builder(ollamaChatCompletion).build());
     }
 
     @GetMapping(value = "/api/tags", produces = "application/json")
     public Mono<String> listModels() {
         return WebClient.create(ollamaUrl).get().uri("/api/tags").retrieve().bodyToMono(String.class);
-    }
-
-    @Data
-    public static class OllamaChatCompletion {
-        private String model;
-        private String created_at;
-        private String response;
-        private Boolean done;
-        private List<Integer> context;
-        private Long total_duration;
-        private Long load_duration;
-        private Long prompt_eval_count;
-        private Long prompt_eval_duration;
-        private Long eval_count;
-        private Long eval_duration;
     }
 }
