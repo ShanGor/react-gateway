@@ -67,6 +67,11 @@ public class SinglePageApplicationController {
         var prefixAsPath = "%s%s/".formatted(basePath, spaPath);
 
         var requestPath = request.getPath().value();
+        // Prevent path traversal
+        if (requestPath.contains("..") || requestPath.contains("//") || requestPath.contains("./")|| requestPath.contains("\\")) {
+            return return404(response);
+        }
+
         if (prefix.equals(requestPath) || prefixAsPath.equals(requestPath)) return index(response);
 
         var filePath = requestPath.substring(prefixAsPath.length());
