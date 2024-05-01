@@ -60,7 +60,6 @@ public class SinglePageApplicationController {
         return returnFile(response, resource);
     }
 
-
     @GetMapping("${gateway.spa-path}/**")
     public Mono<Void> serveSpa(ServerHttpRequest request, ServerHttpResponse response) {
         var prefix = "%s%s".formatted(basePath, spaPath);
