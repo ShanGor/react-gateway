@@ -51,7 +51,6 @@ public class OllamaProxyController {
             return Flux.error(e);
         }
 
-
         WebClient.RequestBodySpec client;
         if (stream) {
             client = WebClient.create(ollamaUrl).post().uri("/api/chat").header("Content-Type", "text/stream-event;charset=utf-8");
@@ -63,12 +62,14 @@ public class OllamaProxyController {
         }
 
         var requestId = UUID.randomUUID().toString();
-        var idString = """
+        var startInfo = """
                 {"id":"%s","done":false}""".formatted(requestId);
+        var endInfo = """
+                {"id":"%s","done":true}""".formatted(requestId);
 
         var cancelDisposable = Schedulers.newSingle(requestId);
         requestPool.put(requestId, cancelDisposable);
-        return Flux.just(idString)
+        return Flux.just(startInfo)
                 .concatWith(client.bodyValue(requestText).retrieve().bodyToFlux(String.class))
                 .cancelOn(cancelDisposable)
                 .doFinally(signal -> clearRequest(requestId))
@@ -76,7 +77,8 @@ public class OllamaProxyController {
                 .map(ollamaChatCompletion -> {
                     if (requestPool.containsKey(requestId))
                         return ServerSentEvent.builder(ollamaChatCompletion).build();
-                    return null;
+                    else
+                        return ServerSentEvent.builder(endInfo).build();
                 });
 
     }
