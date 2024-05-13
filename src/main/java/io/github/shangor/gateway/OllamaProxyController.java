@@ -9,14 +9,14 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @CrossOrigin(origins = {"*"})
@@ -27,7 +27,7 @@ public class OllamaProxyController {
     @Resource
     ObjectMapper objectMapper;
 
-    private Set<String> requestPool = new CopyOnWriteArraySet<>();
+    private Map<String, Disposable> requestPool = new ConcurrentHashMap<>();
 
     /**
      * Will only return as text-stream.
@@ -37,8 +37,6 @@ public class OllamaProxyController {
      */
     @PostMapping("/chat/ollama")
     public Flux<ServerSentEvent<String>> chat(@RequestBody String requestText, ServerHttpRequest request) {
-        var requestId = UUID.randomUUID().toString();
-        requestPool.add(requestId);
 
         Boolean stream;
         try {
@@ -53,7 +51,6 @@ public class OllamaProxyController {
             return Flux.error(e);
         }
 
-        var cancelDisposable = Schedulers.newSingle(requestId);
 
         WebClient.RequestBodySpec client;
         if (stream) {
@@ -64,28 +61,45 @@ public class OllamaProxyController {
         for (var entry : request.getHeaders().entrySet()) {
             client = client.header(entry.getKey(), entry.getValue().get(0));
         }
+
+        var requestId = UUID.randomUUID().toString();
         var idString = """
-                {"id": "%s", "done": false}""".formatted(requestId);
-        return Flux.just(ServerSentEvent.builder(idString).build())
-                .concatWith(client.bodyValue(requestText)
-                .retrieve()
-                .bodyToFlux(String.class).cancelOn(cancelDisposable)
+                {"id":"%s","done":false}""".formatted(requestId);
+
+        var cancelDisposable = Schedulers.newSingle(requestId);
+        requestPool.put(requestId, cancelDisposable);
+        return Flux.just(idString)
+                .concatWith(client.bodyValue(requestText).retrieve().bodyToFlux(String.class))
+                .cancelOn(cancelDisposable)
+                .doFinally(signal -> clearRequest(requestId))
+                .onErrorStop()
                 .map(ollamaChatCompletion -> {
-                    if (requestPool.contains(requestId)) {
+                    if (requestPool.containsKey(requestId))
                         return ServerSentEvent.builder(ollamaChatCompletion).build();
-                    } else {
-                        cancelDisposable.dispose();
-                        return ServerSentEvent.builder("""
-                                {"id": "%s", "done": true}""".formatted(requestId)).build();
-                    }
-                })).doFinally(signal -> {
-                    requestPool.remove(requestId);
+                    return null;
                 });
+
+    }
+
+
+    private void clearRequest(String requestId) {
+        requestPool.computeIfPresent(requestId, (k, v) -> {
+            try {
+                var disposable = v;
+                if (disposable != null) {
+                    requestPool.remove(requestId);
+                    disposable.dispose();
+                    log.info("Successfully cleared request {}", requestId);
+                }
+            } catch (Exception e) { }
+            return null;
+        });
+
     }
 
     @GetMapping(value = "/api/cancel/{requestId}")
     public String cancel(@PathVariable String requestId) {
-        requestPool.remove(requestId);
+        clearRequest(requestId);
         return "ok";
     }
 
