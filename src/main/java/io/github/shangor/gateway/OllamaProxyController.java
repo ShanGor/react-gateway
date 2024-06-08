@@ -2,9 +2,13 @@ package io.github.shangor.gateway;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.r2dbc.postgresql.codec.Json;
+import io.r2dbc.postgresql.codec.Vector;
 import jakarta.annotation.Resource;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +18,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +34,9 @@ public class OllamaProxyController {
     ObjectMapper objectMapper;
 
     private Map<String, Disposable> requestPool = new ConcurrentHashMap<>();
+
+    @Resource
+    R2dbcEntityTemplate r2dbcEntityTemplate;
 
     /**
      * Will only return as text-stream.
@@ -103,6 +112,37 @@ public class OllamaProxyController {
     public String cancel(@PathVariable String requestId) {
         clearRequest(requestId);
         return "ok";
+    }
+
+    @PostMapping("/api/get-embeddings")
+    public Flux getEmbeddings(@RequestBody String body) {
+        return WebClient.create(ollamaUrl).post().uri("/api/embeddings").bodyValue(Map.of("model", "all-minilm", "prompt", body))
+                .retrieve().bodyToMono(OllamaEmbedding.class).flatMapMany(ollamaEmbedding -> {
+            var sql = "select * from knowledge_base ORDER BY  embedding <-> :eb limit 5";
+
+            var embedding = Vector.of(ollamaEmbedding.getEmbedding());
+            return r2dbcEntityTemplate.getDatabaseClient().sql(sql).bind(0, embedding).fetch().all().map(o -> {
+                var map = new HashMap<String, Object>();
+                o.forEach((k,v) -> {
+                    if (v instanceof Json j) {
+                        try {
+                            map.put(k, objectMapper.readValue(j.asString(), Map.class));
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else if (!(v instanceof Vector)) {
+                        map.put(k, v);
+                    }
+                });
+                return map;
+            });
+
+        });
+    }
+
+    @Data
+    public static class OllamaEmbedding {
+        private List<Double> embedding;
     }
 
     @GetMapping(value = "/api/tags", produces = "application/json")

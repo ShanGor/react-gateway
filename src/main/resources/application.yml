@@ -9,6 +9,18 @@ spring:
       max-header-size: 2MB
   codec:
     max-in-memory-size: 10MB
+
+  r2dbc:
+    url: r2dbc:postgresql://localhost:15432/sam?reWriteBatchedInserts=true
+    username: sam
+    password: sam
+    name: sam
+    pool:
+      validate-query: select 1
+      enabled: true
+      initial-size: 10
+      max-size: 10
+
 server:
   compression:
     enabled: true
