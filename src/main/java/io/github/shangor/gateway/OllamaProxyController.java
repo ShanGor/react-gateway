@@ -114,14 +114,16 @@ public class OllamaProxyController {
         return "ok";
     }
 
-    @PostMapping("/api/get-embeddings")
-    public Flux getEmbeddings(@RequestBody String body) {
+    @PostMapping("/api/find-embeddings/{topK}")
+    public Flux getEmbeddings(@RequestBody String body, @PathVariable int topK) {
         return WebClient.create(ollamaUrl).post().uri("/api/embeddings").bodyValue(Map.of("model", "all-minilm", "prompt", body))
                 .retrieve().bodyToMono(OllamaEmbedding.class).flatMapMany(ollamaEmbedding -> {
-            var sql = "select * from knowledge_base ORDER BY  embedding <-> :eb limit 5";
+            var sql = "select (embedding <-> :eb) as distance, * from knowledge_base ORDER BY distance limit :tk";
 
             var embedding = Vector.of(ollamaEmbedding.getEmbedding());
-            return r2dbcEntityTemplate.getDatabaseClient().sql(sql).bind(0, embedding).fetch().all().map(o -> {
+            return r2dbcEntityTemplate.getDatabaseClient().sql(sql)
+                    .bind(0, embedding).bind(1, topK)
+                    .fetch().all().map(o -> {
                 var map = new HashMap<String, Object>();
                 o.forEach((k,v) -> {
                     if (v instanceof Json j) {
