@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: react-gateway
+
+server:
+  compression:
+    enabled: true
+
+gateway:
+  static-file-path: c:/tmp/test-hey-1578
+  default-file: index.html
+  spa-path: /ui

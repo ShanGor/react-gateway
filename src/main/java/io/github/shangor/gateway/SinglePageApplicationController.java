@@ -3,6 +3,8 @@ package io.github.shangor.gateway;
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.ZeroCopyHttpOutputMessage;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -23,12 +25,12 @@ public class SinglePageApplicationController {
     private final String basePath;
     private final Path resourceParent;
     private final String defaultFile;
-    @Value("${gateway.spa-path}")
-    private String spaPath;
+    private final String spaPath;
 
     public SinglePageApplicationController(@Value("${spring.webflux.base-path:}") String base,
                                            @Value("${gateway.default-file:index.html}") String defaultFile,
-                                           @Value("${gateway.static-file-path}") String resourcePath) {
+                                           @Value("${gateway.static-file-path}") String resourcePath,
+                                           @Value("${gateway.spa-path}") String spaPath) {
         if (StringUtils.isBlank(base) || "/".equals(base)) {
             basePath = "";
         } else if (!base.startsWith("/")) {
@@ -46,6 +48,7 @@ public class SinglePageApplicationController {
         }
         resourceParent = Paths.get(resourcePath);
         this.defaultFile = defaultFile;
+        this.spaPath = spaPath;
     }
 
     public Mono<Void> index(ServerHttpResponse response) {
@@ -98,11 +101,14 @@ public class SinglePageApplicationController {
     }
 
     public static Mono<Void> returnFile(ServerHttpResponse response, Path resource) {
-        var zeroCopyResponse = (ZeroCopyHttpOutputMessage) response;
         var file = resource.toFile();
         setContentType(response, file.getName());
-        // return response.writeWith(DataBufferUtils.read(resource, new DefaultDataBufferFactory(), 4096));
-        return zeroCopyResponse.writeWith(file, 0, file.length());
+        if (response instanceof ZeroCopyHttpOutputMessage) {
+            var zeroCopyResponse = (ZeroCopyHttpOutputMessage) response;
+            return zeroCopyResponse.writeWith(file, 0, file.length());
+        } else {
+            return response.writeWith(DataBufferUtils.read(resource, new DefaultDataBufferFactory(), 4096));
+        }
     }
 
     public static void setContentType(ServerHttpResponse response, String fileName) {
