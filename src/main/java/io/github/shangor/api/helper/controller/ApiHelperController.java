@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.shangor.api.helper.db.RequestEntity;
 import io.github.shangor.api.helper.db.RequestRepository;
 import io.github.shangor.api.helper.pojo.RequestTree;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
