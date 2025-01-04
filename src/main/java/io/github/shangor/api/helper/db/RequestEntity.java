@@ -1,5 +1,6 @@
 package io.github.shangor.api.helper.db;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -15,6 +16,8 @@ import java.sql.Timestamp;
 public class RequestEntity {
     @Id
     private Long id;
+
+    @Column(columnDefinition = "CHARACTER LARGE OBJECT")
     private String content;
 
     @CreationTimestamp

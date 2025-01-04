@@ -1,7 +1,7 @@
 package io.github.shangor.api.helper.pojo;
 
 import lombok.Data;
-import org.springframework.util.MultiValueMap;
+import org.springframework.util.LinkedMultiValueMap;
 
 import java.util.LinkedList;
 
@@ -15,7 +15,7 @@ public class RequestTree {
     private String method;
     private String body;
     private String contentType;
-    private MultiValueMap<String, String> headers;
+    private LinkedMultiValueMap<String, String> headers;
 
     private LinkedList<RequestTree> children;
 }

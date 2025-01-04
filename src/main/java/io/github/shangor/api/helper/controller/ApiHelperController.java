@@ -32,8 +32,9 @@ public class ApiHelperController {
         return list;
     }
 
-    @PostMapping("/api/requests")
-    public RequestEntity addRequestTree(@RequestBody RequestTree requestTree) throws IOException {
+    @PostMapping(path = "/api/requests")
+    public RequestEntity addRequestTree(@RequestBody String body) throws IOException {
+        var requestTree = objectMapper.readValue(body, RequestTree.class);
         Long id = requestTree.getId();
         if (id == null || id < 1) {
             id = System.currentTimeMillis();
