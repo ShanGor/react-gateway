@@ -7,6 +7,6 @@ server:
     enabled: true
 
 gateway:
-  static-file-path: c:/tmp/hey
+  static-file-path: ${STATIC_FILE_PATH}
   default-file: index.html
   spa-path: /ui
