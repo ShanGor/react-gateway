@@ -26,7 +26,7 @@ server:
     enabled: true
 
 gateway:
-  static-file-path: D:/sources/git/js/ai-chat-ui/dist
+  static-file-path: ${STATIC_FILE_PATH}
   default-file: index.html
   spa-path: /ui
 
