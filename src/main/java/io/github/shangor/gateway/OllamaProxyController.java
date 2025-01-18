@@ -33,7 +33,7 @@ public class OllamaProxyController {
     @Resource
     ObjectMapper objectMapper;
 
-    private Map<String, Disposable> requestPool = new ConcurrentHashMap<>();
+    private final Map<String, Disposable> requestPool = new ConcurrentHashMap<>();
 
     @Resource
     R2dbcEntityTemplate r2dbcEntityTemplate;
@@ -47,15 +47,11 @@ public class OllamaProxyController {
     @PostMapping("/chat/ollama")
     public Flux<ServerSentEvent<String>> chat(@RequestBody String requestText, ServerHttpRequest request) {
 
-        Boolean stream;
+        boolean stream;
         try {
             var m = objectMapper.readValue(requestText, Map.class);
             var streamInRequest = m.get("stream");
-            if (streamInRequest != null && "false".equalsIgnoreCase(streamInRequest.toString())) {
-                stream = false;
-            } else {
-                stream = true;
-            }
+            stream = streamInRequest == null || !"false".equalsIgnoreCase(streamInRequest.toString());
         } catch (JsonProcessingException e) {
             return Flux.error(e);
         }
@@ -96,13 +92,10 @@ public class OllamaProxyController {
     private void clearRequest(String requestId) {
         requestPool.computeIfPresent(requestId, (k, v) -> {
             try {
-                var disposable = v;
-                if (disposable != null) {
-                    requestPool.remove(requestId);
-                    disposable.dispose();
-                    log.info("Successfully cleared request {}", requestId);
-                }
-            } catch (Exception e) { }
+                requestPool.remove(requestId);
+                v.dispose();
+                log.info("Successfully cleared request {}", requestId);
+            } catch (Exception ignored) { }
             return null;
         });
 
