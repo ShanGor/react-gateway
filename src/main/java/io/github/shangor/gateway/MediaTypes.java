@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MIME Types, ref to https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+ * MIME Types, ref to <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types">Common Types</a>
  */
 public class MediaTypes {
     public static final Map<String, String> MEDIA_TYPES = Map.ofEntries(
@@ -87,5 +87,4 @@ public class MediaTypes {
             Map.entry("7z", "application/x-7z-compressed")
     );
 
-    public static final List<String> SUFFIXES = MEDIA_TYPES.keySet().stream().toList();
 }

@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
+import java.util.Set;
 
 import static io.github.shangor.gateway.MediaTypes.MEDIA_TYPES;
-import static io.github.shangor.gateway.MediaTypes.SUFFIXES;
 
 @Slf4j
 @RestController
@@ -26,6 +28,8 @@ public class SinglePageApplicationController {
     private final Path resourceParent;
     private final String defaultFile;
     private final String spaPath;
+
+    private static final Set<String> NO_CACHE_FILES = Set.of("favicon.ico", "robots.txt", "index.html", "index.htm");
 
     public SinglePageApplicationController(@Value("${spring.webflux.base-path:}") String base,
                                            @Value("${gateway.default-file:index.html}") String defaultFile,
@@ -103,21 +107,31 @@ public class SinglePageApplicationController {
 
     public static Mono<Void> returnFile(ServerHttpResponse response, Path resource) {
         var file = resource.toFile();
-        setContentType(response, file.getName());
-        if (response instanceof ZeroCopyHttpOutputMessage) {
-            var zeroCopyResponse = (ZeroCopyHttpOutputMessage) response;
+        setHeaders(response, file);
+        if (response instanceof ZeroCopyHttpOutputMessage zeroCopyResponse) {
             return zeroCopyResponse.writeWith(file, 0, file.length());
         } else {
             return response.writeWith(DataBufferUtils.read(resource, new DefaultDataBufferFactory(), 4096));
         }
     }
 
-    public static void setContentType(ServerHttpResponse response, String fileName) {
-        for (var suffix : SUFFIXES) {
-            if (fileName.endsWith(suffix)) {
+    public static void setHeaders(ServerHttpResponse response, File file) {
+        var fileName = file.getName().toLowerCase(Locale.ROOT);
+        // get suffix of the fileName
+        if (fileName.contains(".")) {
+            var suffix = fileName.substring(fileName.lastIndexOf("."));
+            if (MEDIA_TYPES.containsKey(suffix)) {
                 response.getHeaders().set("Content-Type", MEDIA_TYPES.get(suffix));
-                break;
             }
+        }
+
+        if (NO_CACHE_FILES.contains(fileName)) {
+            response.getHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
+            response.getHeaders().set("Pragma", "no-cache");
+            response.getHeaders().set("Expires", "0");
+        } else {
+            // max-age: seconds to expire. 31536000 = 365 days approximately 1 year
+            response.getHeaders().set("Cache-Control", "max-age=31536000");
         }
     }
 }
