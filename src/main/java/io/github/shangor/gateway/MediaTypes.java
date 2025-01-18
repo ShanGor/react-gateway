@@ -1,13 +1,12 @@
 package io.github.shangor.gateway;
 
-import java.util.List;
 import java.util.Map;
 
 /**
  * MIME Types, ref to <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types">Common Types</a>
  */
 public class MediaTypes {
-    public static final Map<String, String> MEDIA_TYPES = Map.ofEntries(
+    public static final Map<String, String> MEDIA_TYPES = Map.<String, String>ofEntries(
             Map.entry(".aac", "audio/aac"),
             Map.entry(".abw", "application/x-abiword"),
             Map.entry(".apng", "image/apng"),
