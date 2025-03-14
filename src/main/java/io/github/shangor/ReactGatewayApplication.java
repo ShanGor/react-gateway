@@ -1,4 +1,4 @@
-package io.github.shangor.gateway;
+package io.github.shangor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
