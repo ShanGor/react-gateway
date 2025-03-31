@@ -10,16 +10,41 @@ spring:
   codec:
     max-in-memory-size: 10MB
 
-  r2dbc:
-    url: r2dbc:postgresql://localhost:15432/sam?reWriteBatchedInserts=true
+  datasource:
+    url: jdbc:postgresql://localhost:15432/rag?reWriteBatchedInserts=true
     username: rag
     password: rag
     name: rag
-    pool:
-      enabled: true
-      initial-size: 10
-      max-size: 10
-      validation-query: select 1
+    hikari:
+      auto-commit: true
+      connection-timeout: 3000
+      idle-timeout: 600000
+      connection-test-query: select 1
+      minimum-idle: 1
+      maximum-pool-size: 10
+  jpa:
+    hibernate:
+      ddl-auto: none
+  liquibase:
+    url: ${spring.datasource.url}
+    user: rag
+    password: rag
+    change-log: classpath:db/changelog/master.yaml
+  ai:
+    ollama:
+      chat:
+        model: qwen2.5:7b # llama3.2-vision
+      base-url: http://localhost:11434
+      embedding:
+        model: bge-m3
+        options:
+          max-tokens: 8192
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1024
+        max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
 
 server:
   compression:
@@ -33,3 +58,8 @@ gateway:
 ai:
   ollama:
     url: http://localhost:11434
+
+custom:
+  ai:
+    response-timeout: 2m
+  upload-dir: c:/tmp/rag/upload

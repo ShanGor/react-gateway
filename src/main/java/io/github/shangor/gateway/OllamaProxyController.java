@@ -2,19 +2,17 @@ package io.github.shangor.gateway;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.shangor.llm.EmbeddingFunc;
 import io.github.shangor.llm.LlmCompletionFunc;
 import io.github.shangor.llm.impl.OllamaCompletionFunc;
 import io.github.shangor.llm.impl.OllamaEmbeddingFunc;
 import io.github.shangor.llm.pojo.OpenAiCompletionRequest;
 import io.github.shangor.llm.service.HttpService;
 import io.github.shangor.util.GenUtils;
-import io.r2dbc.postgresql.codec.Json;
-import io.r2dbc.postgresql.codec.Vector;
-import lombok.Data;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -26,28 +24,28 @@ import reactor.core.scheduler.Schedulers;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.ai.document.Document;
 
 @RestController
 @CrossOrigin(origins = {"*"})
 @Slf4j
 public class OllamaProxyController {
+    @Resource
+    VectorStore vectorStore;
 
     private final ObjectMapper objectMapper;
 
     private final LlmCompletionFunc completionFunc;
 
     private final Map<String, Disposable> requestPool = new ConcurrentHashMap<>();
-    private final EmbeddingFunc embeddingFunc;
 
     private final String ollamaUrl;
 
     private static final ServerSentEvent<String> DONE = ServerSentEvent.builder("DONE").build();
 
-    private final R2dbcEntityTemplate r2dbcEntityTemplate;
     public OllamaProxyController(@Value("${ai.ollama.url}") String ollamaUrl,
                                  ObjectMapper objectMapper,
-                                 HttpService httpService,
-                                 R2dbcEntityTemplate r2dbcEntityTemplate) {
+                                 HttpService httpService) {
         this.ollamaUrl = ollamaUrl;
         var ollamaCompletionFunc = new OllamaCompletionFunc();
         var ollamaEmbeddingFunc = new OllamaEmbeddingFunc();
@@ -57,9 +55,7 @@ public class OllamaProxyController {
         ollamaEmbeddingFunc.setUrl(URI.create("%s/api/embed".formatted(ollamaUrl)));
         ollamaEmbeddingFunc.setHttpService(httpService);
         this.completionFunc = ollamaCompletionFunc;
-        this.r2dbcEntityTemplate = r2dbcEntityTemplate;
         this.objectMapper = objectMapper;
-        this.embeddingFunc = ollamaEmbeddingFunc;
     }
 
     /**
@@ -118,34 +114,11 @@ public class OllamaProxyController {
     }
 
     @PostMapping("/api/find-embeddings/{topK}")
-    public Flux getEmbeddings(@RequestBody String body, @PathVariable int topK) {
-        var embedding = embeddingFunc.convert(body, "all-minilm");
-
-        var sql = "select (embedding <-> :eb) as distance, * from knowledge_base ORDER BY distance limit :tk";
-
-        return r2dbcEntityTemplate.getDatabaseClient().sql(sql).bind(0, embedding).bind(1, topK).fetch()
-                .all()
-                .map(o -> {
-                    var map = new HashMap<String, Object>();
-                    o.forEach((k,v) -> {
-                        if (v instanceof Json j) {
-                            try {
-                                map.put(k, objectMapper.readValue(j.asString(), Map.class));
-                            } catch (JsonProcessingException e) {
-                                throw new RuntimeException(e);
-                            }
-                        } else if (!(v instanceof Vector)) {
-                            map.put(k, v);
-                        }
-                    });
-                    return map;
-                });
-
-    }
-
-    @Data
-    public static class OllamaEmbedding {
-        private List<Double> embedding;
+    public Flux<Document> getEmbeddings(@RequestBody String body, @PathVariable int topK) {
+        return Flux.create(sink -> Thread.ofVirtual().start(() -> {
+            vectorStore.similaritySearch(SearchRequest.builder().topK(topK).query(body).build()).forEach(sink::next);
+            sink.complete();
+        }));
     }
 
     @GetMapping(value = "/api/tags", produces = "application/json")
