@@ -6,11 +6,14 @@ import com.fasterxml.uuid.Generators;
 import io.github.shangor.config.CustomAiMcp;
 import io.github.shangor.data.entity.UploadFileRecordEntity;
 import io.github.shangor.data.repo.UploadFileRecordRepository;
+import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.Resource;
 import liquibase.util.MD5Util;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.document.DocumentReader;
 import org.springframework.ai.reader.ExtractedTextFormatter;
+import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.reader.pdf.ParagraphPdfDocumentReader;
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
@@ -30,7 +33,6 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.sql.SQLException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -92,42 +94,56 @@ public class EtlController {
     @PostMapping("/api/docs/convert/{id}")
     public Mono<?> convertRag(@PathVariable String id) {
         return Mono.create(sink -> Thread.ofVirtual().start(() -> {
-            var opt = uploadRepo.findById(id);
-            if (opt.isEmpty()) {
-                sink.success(ResponseEntity.status(404).body("Not found the file"));
-            }
-            var o = opt.get();
-            var path = Paths.get(o.getFilePath());
-            if (!Files.exists(path)) {
-                sink.success(ResponseEntity.status(404).body("File cannot be found with the given path, might got data damage issue."));
-                return;
+            try {
+                var opt = uploadRepo.findById(id);
+                if (opt.isEmpty()) {
+                    sink.success(ResponseEntity.status(404).body("Not found the file"));
+                    return;
+                }
+                var o = opt.get();
+                var path = Paths.get(o.getFilePath());
+                if (!Files.exists(path)) {
+                    sink.success(ResponseEntity.status(404).body("File cannot be found with the given path, might got data damage issue."));
+                    return;
+                }
+
+                if (".pdf".equalsIgnoreCase(o.getFileType())) {
+                    var cfg = PdfDocumentReaderConfig.builder()
+                            .withPageTopMargin(0)
+                            .withPageExtractedTextFormatter(ExtractedTextFormatter.builder()
+                                    .withLeftAlignment(true)
+                                    .withNumberOfTopTextLinesToDelete(0)
+                                    .build())
+                            .withPagesPerDocument(1)
+                            .build();
+
+                    DocumentReader pdfReader;
+                    try {
+                        pdfReader = new ParagraphPdfDocumentReader(new FileSystemResource(o.getFilePath()), cfg);
+                    } catch (IllegalArgumentException e) {
+                        pdfReader = new PagePdfDocumentReader(new FileSystemResource(o.getFilePath()), cfg);
+                    }
+
+                    var docs = pdfReader.read();
+                    docs.forEach(d -> {
+                        var text = d.getText();
+                        if (StringUtils.isBlank(text)) return;
+                        var docId = Generators.timeBasedEpochGenerator().generate().toString();
+                        var meta = new HashMap<>(d.getMetadata());
+                        meta.put("fileOriginalName", o.getFileName());
+                        meta.put("fileRecordId", o.getId());
+                        var doc = new org.springframework.ai.document.Document(docId, text.trim(), meta);
+                        vectorStore.doAdd(List.of(doc));
+                    });
+                    o.setProcessStatus("converted");
+                    sink.success(uploadRepo.save(o));
+                } else {
+                    sink.success(ResponseEntity.status(400).body("Unsupported file type"));
+                }
+            } catch (Exception e) {
+                sink.error(e);
             }
 
-            if (".pdf".equalsIgnoreCase(o.getFileType())) {
-                var cfg = PdfDocumentReaderConfig.builder()
-                        .withPageTopMargin(0)
-                        .withPageExtractedTextFormatter(ExtractedTextFormatter.builder()
-                                .withNumberOfTopTextLinesToDelete(0)
-                                .build())
-                        .withPagesPerDocument(1)
-                        .build();
-
-                var pdfReader = new ParagraphPdfDocumentReader(new FileSystemResource(o.getFilePath()), cfg);
-
-                var docs = pdfReader.read();
-                docs.forEach(d -> {
-                    var docId = Generators.timeBasedEpochGenerator().generate().toString();
-                    var meta = new HashMap<>(d.getMetadata());
-                    meta.put("fileOriginalName", o.getFileName());
-                    meta.put("fileRecordId", o.getId());
-                    var doc = new org.springframework.ai.document.Document(docId, d.getText(), meta);
-                    vectorStore.doAdd(List.of(doc));
-                });
-                o.setProcessStatus("converted");
-                sink.success(uploadRepo.save(o));
-            } else {
-                sink.success(ResponseEntity.status(400).body("Unsupported file type"));
-            }
         }));
     }
 
