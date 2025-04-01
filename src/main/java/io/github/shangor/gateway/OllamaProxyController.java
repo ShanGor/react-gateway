@@ -2,6 +2,7 @@ package io.github.shangor.gateway;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.shangor.data.dto.ChatRequest;
 import io.github.shangor.llm.LlmCompletionFunc;
 import io.github.shangor.llm.impl.OllamaCompletionFunc;
 import io.github.shangor.llm.impl.OllamaEmbeddingFunc;
@@ -159,7 +160,8 @@ public class OllamaProxyController {
         options.setStream(true);
         List<LlmCompletionFunc.CompletionMessage> messages;
         try {
-            var request = objectMapper.readValue(requestText, OpenAiCompletionRequest.class);
+            var chatRequest = objectMapper.readValue(requestText, ChatRequest.class);
+            var request = chatRequest.getRequest();
             options.setModel(request.getModel());
             var ollamaRequest = OllamaCompletionFunc.OllamaRequest.fromOpenAiRequest(request);
             messages = ollamaRequest.getMessages();
