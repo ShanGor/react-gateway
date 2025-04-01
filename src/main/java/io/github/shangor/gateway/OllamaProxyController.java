@@ -81,7 +81,8 @@ public class OllamaProxyController {
         options.setStream(true);
         List<org.springframework.ai.chat.messages.Message> messages = new LinkedList<>();
         try {
-            var request = objectMapper.readValue(requestText, OpenAiCompletionRequest.class);
+            var chatRequest = objectMapper.readValue(requestText, ChatRequest.class);
+            var request = chatRequest.getRequest();
             options.setModel(request.getModel());
             var ollamaRequest = OllamaCompletionFunc.OllamaRequest.fromOpenAiRequest(request);
             ollamaRequest.getMessages().forEach(msg -> {
