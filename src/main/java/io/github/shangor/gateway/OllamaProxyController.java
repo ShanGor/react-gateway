@@ -80,8 +80,9 @@ public class OllamaProxyController {
         LlmCompletionFunc.Options options = new LlmCompletionFunc.Options();
         options.setStream(true);
         List<org.springframework.ai.chat.messages.Message> messages = new LinkedList<>();
+        ChatRequest chatRequest;
         try {
-            var chatRequest = objectMapper.readValue(requestText, ChatRequest.class);
+            chatRequest = objectMapper.readValue(requestText, ChatRequest.class);
             var request = chatRequest.getRequest();
             options.setModel(request.getModel());
             var ollamaRequest = OllamaCompletionFunc.OllamaRequest.fromOpenAiRequest(request);
@@ -103,7 +104,7 @@ public class OllamaProxyController {
         requestPool.put(requestId, cancelDisposable);
         return chatClientBuilder.defaultOptions(ChatOptions.builder().model(options.getModel()).build()).build()
                 .prompt()
-                .advisors(new QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(5).build()))
+                .advisors(new QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(chatRequest.getOptions().getRagTopK()).build()))
                 .messages(messages).stream().chatResponse()
                 .cancelOn(cancelDisposable)
                 .doFinally(signal -> clearRequest(requestId))
