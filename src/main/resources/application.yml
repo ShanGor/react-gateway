@@ -30,6 +30,7 @@ spring:
     user: rag
     password: rag
     change-log: classpath:db/changelog/master.yaml
+    enabled: false
   ai:
     ollama:
       chat:
