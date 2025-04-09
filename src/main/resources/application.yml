@@ -9,6 +9,8 @@ spring:
       max-headers-size: 2MB
   codec:
     max-in-memory-size: 10MB
+  autoconfigure:
+    exclude: org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
 
   datasource:
     url: jdbc:postgresql://localhost:15432/rag?reWriteBatchedInserts=true
