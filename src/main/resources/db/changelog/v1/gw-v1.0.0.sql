@@ -1,5 +1,5 @@
 --liquibase formatted sql
---changeset Samuel Chan:v1
+--changeset Samuel Chan:gw-v1.0.0
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS hstore;
 

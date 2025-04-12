@@ -16,6 +16,8 @@
 	<properties>
 		<java.version>21</java.version>
 		<spring-ai.version>1.0.0-M6</spring-ai.version>
+		<spring-boot.version>3.4.3</spring-boot.version>
+		<lombok.version>1.18.36</lombok.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -52,7 +54,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.36</version>
+			<version>${lombok.version}</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -76,6 +78,11 @@
 			<groupId>com.fasterxml.uuid</groupId>
 			<artifactId>java-uuid-generator</artifactId>
 			<version>4.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>io.github.shangor</groupId>
+			<artifactId>state-machine-pg</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>

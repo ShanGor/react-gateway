@@ -13,7 +13,7 @@ spring:
     exclude: org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
 
   datasource:
-    url: jdbc:postgresql://localhost:15432/rag?reWriteBatchedInserts=true
+    url: jdbc:postgresql://localhost:15432/r1?reWriteBatchedInserts=true&stringtype=unspecified
     username: rag
     password: rag
     name: rag

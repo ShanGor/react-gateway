@@ -1,10 +1,11 @@
 package io.github.shangor;
 
+import io.github.shangor.statemachine.StatemachineApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackageClasses = {ReactGatewayApplication.class, StatemachineApplication.class})
 @EnableTransactionManagement
 public class ReactGatewayApplication {
 

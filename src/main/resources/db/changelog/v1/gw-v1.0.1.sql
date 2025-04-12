@@ -1,5 +1,5 @@
 --liquibase formatted sql
---changeset Samuel Chan:v1.0.1
+--changeset Samuel Chan:gw-v1.0.1
 --comment: add file storage table
 CREATE TABLE IF NOT EXISTS upload_file_record (
     id varchar(255) PRIMARY KEY,
