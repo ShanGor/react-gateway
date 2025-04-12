@@ -8,6 +8,7 @@ import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -22,7 +23,9 @@ import java.util.List;
 @AllArgsConstructor
 @Data
 @Slf4j
-public class AgentNode extends StateGraph.ActionNode {
+public class AgentNode extends StateGraph.ActionNode<AgentNode.Param, ChatResponse> {
+    public static final String AGENT_NAME = "agentName";
+
     public static final ToolCallback[] EMPTY_TOOLS = new ToolCallback[0];
     private String systemPrompt;
     /**
@@ -33,6 +36,14 @@ public class AgentNode extends StateGraph.ActionNode {
     private String model;
     private List<String> tools;
     private ChatModel chatModel;
+
+    @Data
+    @Builder
+    public static class Param {
+        private List<Message> chatHistory;
+        private String inputText;
+        private List<String> imageUrls;
+    }
 
     public ToolCallback[] getToolCallbacks(ToolCallbackProvider provider) {
         if (tools == null || tools.isEmpty()) return EMPTY_TOOLS;
@@ -47,13 +58,14 @@ public class AgentNode extends StateGraph.ActionNode {
         return t.values().toArray(EMPTY_TOOLS);
     }
 
-    public Object action(List<Message> chatHistory, String inputText, List<String> imageUrls) {
+    @Override
+    public ChatResponse action(Param param) {
         List<Message> history = new LinkedList<>();
         if (StringUtils.isNotBlank(systemPrompt)) {
             history.add(new SystemMessage(systemPrompt));
         }
-        if (chatHistory != null && !chatHistory.isEmpty()) {
-            var filteredList = chatHistory.stream().filter(m -> !m.getMessageType().equals(MessageType.SYSTEM)).toList();
+        if (param.chatHistory != null && !param.chatHistory.isEmpty()) {
+            var filteredList = param.chatHistory.stream().filter(m -> !m.getMessageType().equals(MessageType.SYSTEM)).toList();
             if (filteredList.size() > chatHistoryCount) {
                 history.addAll(filteredList.subList(filteredList.size() - chatHistoryCount, filteredList.size()));
 
@@ -63,9 +75,9 @@ public class AgentNode extends StateGraph.ActionNode {
         }
 
         UserMessage userMessage;
-        var text = inputText;
-        if (StringUtils.isNotBlank(inputText)) {
-            text = userPrompt.replaceFirst("\\{\\s*\\{inputText\\s*}}", inputText);
+        var text = param.inputText;
+        if (StringUtils.isNotBlank(param.inputText)) {
+            text = userPrompt.replaceFirst("\\{\\s*\\{inputText\\s*}}", param.inputText);
         }
         userMessage = new UserMessage(text);
 

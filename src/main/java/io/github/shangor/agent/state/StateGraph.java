@@ -37,6 +37,7 @@ public class StateGraph {
     private List<Node> nodes;
     private List<Edge> edges;
 
+
     @Data
     @Builder
     public static class StartNode implements Node {
@@ -68,12 +69,18 @@ public class StateGraph {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    @Builder
-    public static class ActionNode implements Node {
+    public abstract static class ActionNode <T, R> implements Node {
         protected String id;
         protected String label;
         protected String description;
         protected Status status;
+
+        public static final String ACTION_TYPE = "actionType";
+        public static class ActionType {
+            public static final String LLM_AGENT = "LLM_AGENT";
+        }
+
+
 
         @Override
         public Type getType() {
@@ -81,9 +88,7 @@ public class StateGraph {
         }
 
 
-        public Object action(Object ...args) {
-            return "actioned";
-        }
+        public abstract R action(T arg);
     }
 
     @Data
@@ -160,10 +165,20 @@ public class StateGraph {
 
             switch (node.getNodeType()) {
                 case "ACTION" -> {
-                    nodes.add(StateGraph.ActionNode.builder()
-                            .id(node.getNodeId())
-                            .label(node.getNodeName())
-                            .build());
+                    var actionDetail = node.getDetail();
+                    if (actionDetail != null) {
+                        var actionType = actionDetail.get(ActionNode.ACTION_TYPE);
+
+                        if (ActionNode.ActionType.LLM_AGENT.equals(actionType)) {
+                            var agentName = actionDetail.get(AgentNode.AGENT_NAME);
+
+                            var agentNode = new AgentNode();
+                            agentNode.setId(node.getNodeId());
+                            agentNode.setLabel(agentName);
+                            agentNode.setDescription(node.getNodeName());
+                            nodes.add(agentNode);
+                        }
+                    }
                 }
                 case "EDGE" -> {
                     continue;
