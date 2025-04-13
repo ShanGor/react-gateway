@@ -1,5 +1,6 @@
 package io.github.shangor.config;
 
+import io.micrometer.common.util.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.config.CorsRegistry;
@@ -11,15 +12,17 @@ import org.springframework.web.reactive.config.WebFluxConfigurer;
 public class WebConfig implements WebFluxConfigurer {
     private final String corsAllowedOrigin;
 
-    public WebConfig(@Value("${cors.allowed-origin}") String corsAllowedOrigin) {
+    public WebConfig(@Value("${cors.allowed-origin:}") String corsAllowedOrigin) {
         this.corsAllowedOrigin = corsAllowedOrigin;
     }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOrigins(corsAllowedOrigin)
-                .allowedMethods("GET", "OPTIONS", "POST", "PUT", "DELETE")
-                .allowCredentials(true);
+        if (StringUtils.isNotBlank(corsAllowedOrigin)) {
+            registry.addMapping("/api/**")
+                    .allowedOrigins(corsAllowedOrigin)
+                    .allowedMethods("GET", "OPTIONS", "POST", "PUT", "DELETE")
+                    .allowCredentials(true);
+        }
     }
 }
