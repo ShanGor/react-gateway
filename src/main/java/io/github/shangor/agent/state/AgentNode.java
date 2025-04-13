@@ -1,17 +1,11 @@
 package io.github.shangor.agent.state;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.shangor.statemachine.state.ActionNode;
 import io.github.shangor.statemachine.util.JsonUtil;
-import io.micrometer.common.util.StringUtils;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.MessageType;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 

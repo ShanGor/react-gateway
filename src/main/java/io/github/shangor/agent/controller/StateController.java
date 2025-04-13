@@ -1,9 +1,11 @@
 package io.github.shangor.agent.controller;
 
 import io.github.shangor.agent.state.StateGraph;
+import io.github.shangor.statemachine.dao.StatemachineFlowStateRepository;
 import io.github.shangor.statemachine.task.MainFlowTask;
 import lombok.Builder;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -13,7 +15,11 @@ import reactor.core.publisher.Flux;
 
 @RestController
 @Slf4j
+@RequiredArgsConstructor
 public class StateController {
+
+    private final StatemachineFlowStateRepository flowStateRepo;
+
     @Data
     @Builder
     public static class ActionStatus {
@@ -23,27 +29,13 @@ public class StateController {
     }
 
     @GetMapping("/api/agents/status/{id}")
-    public Flux<ServerSentEvent<ActionStatus>> getStatus(@PathVariable String id) {
+    public Flux<ActionStatus> getStatus(@PathVariable String id) {
         return Flux.create(sink -> Thread.ofVirtual().start(() -> {
-            try {
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("1").status("success").message("Agent started").build()).id(id).event("flow-state").build());
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("2").status("running").message("").build()).id(id).event("flow-state").build());
-                Thread.sleep(1000);
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("2").status("success").build()).id(id).event("flow-state").build());
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("3").status("running").build()).id(id).event("flow-state").build());
-                Thread.sleep(1000);
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("3").status("success").build()).id(id).event("flow-state").build());
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("4").status("running").build()).id(id).event("flow-state").build());
-                Thread.sleep(1000);
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("4").status("success").build()).id(id).event("flow-state").build());
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("5").status("running").build()).id(id).event("flow-state").build());
-                Thread.sleep(1000);
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("5").status("success").build()).id(id).event("flow-state").build());
-                sink.next(ServerSentEvent.builder(ActionStatus.builder().id("6").status("success").build()).id(id).event("flow-state").build());
-                sink.complete();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            flowStateRepo.findByTransactionId(id).forEach(o -> {
+                var status = ActionStatus.builder().id(o.getId().getNodeId()).status(o.getState()).build();
+                sink.next(status);
+            });
+            sink.complete();
         }));
     }
     @GetMapping("/api/agents/{useCaseName}")
