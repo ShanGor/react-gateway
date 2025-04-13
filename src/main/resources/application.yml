@@ -62,6 +62,9 @@ ai:
   ollama:
     url: http://localhost:11434
 
+cors:
+  allowed-origin: http://localhost:5173
+
 custom:
   ai:
     response-timeout: 2m

@@ -13,7 +13,6 @@ import reactor.core.publisher.Flux;
 
 @RestController
 @Slf4j
-@CrossOrigin(origins = {"*"})
 public class StateController {
     @Data
     @Builder
