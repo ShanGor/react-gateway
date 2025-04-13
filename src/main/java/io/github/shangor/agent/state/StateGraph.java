@@ -1,18 +1,16 @@
 package io.github.shangor.agent.state;
 
 import io.github.shangor.state.StateUtil;
-import io.github.shangor.statemachine.dao.StateMachineControlEntity;
 import io.micrometer.common.util.StringUtils;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import io.github.shangor.statemachine.state.*;
 
 /**
  * - Node
@@ -37,115 +35,15 @@ public class StateGraph {
     private List<Node> nodes;
     private List<Edge> edges;
 
-
-    @Data
-    @Builder
-    public static class StartNode implements Node {
-        private String id;
-        private String label;
-        private String description;
-        private Status status;
-
-        @Override
-        public Type getType() {
-            return Type.START;
-        }
-    }
-
-    @Data
-    @Builder
-    public static class EndNode implements Node {
-        private String id;
-        private String label;
-        private String description;
-        private Status status;
-
-        @Override
-        public Type getType() {
-            return Type.END;
-        }
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public abstract static class ActionNode <T, R> implements Node {
-        protected String id;
-        protected String label;
-        protected String description;
-        protected Status status;
-
-        public static final String ACTION_TYPE = "actionType";
-        public static class ActionType {
-            public static final String LLM_AGENT = "LLM_AGENT";
-        }
-
-
-
-        @Override
-        public Type getType() {
-            return Type.ACTION;
-        }
-
-
-        public abstract R action(T arg);
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ConditionNode implements Node {
-        protected String id;
-        protected String label;
-        protected String description;
-        protected Status status;
-        @Override
-        public Type getType() {
-            return Type.CONDITION;
-        }
-    }
-
-    public interface Node {
-        String getId();
-        String getLabel();
-        String getDescription();
-        Status getStatus();
-        Type getType();
-
-        enum Type {
-            START,
-            END,
-            ACTION,
-            CONDITION
-        }
-
-        enum Status {
-            PENDING,
-            RUNNING,
-            SUCCESS,
-            FAILURE
-        }
-    }
-
-    @Data
-    @Builder
-    public static class Edge {
-        protected String id;
-        protected String source;
-        protected String target;
-        protected String label;
-    }
-
     /**
-     * Edge node in `StateMachineControlEntity.StateFlow` should be very simple, only one hop, no multiple hop. No formula. Allowed
+     * Edge node in `StateFlow` should be very simple, only one hop, no multiple hop. No formula. Allowed
      * @param flow The workflow defined in state machine.
      * @return StateGraph A state graph.
      */
-    public static StateGraph fromStateMachineFlow(List<StateMachineControlEntity.StateFlow> flow) {
+    public static StateGraph fromStateMachineFlow(List<StateFlow> flow) {
         var nodes = new LinkedList<Node>();
-        var stateProducers = new HashMap<String, StateMachineControlEntity.StateFlow>();
-        var stateAnticipators = new HashMap<String, StateMachineControlEntity.StateFlow>();
+        var stateProducers = new HashMap<String, StateFlow>();
+        var stateAnticipators = new HashMap<String, StateFlow>();
         for (var node : flow) {
             String fromState = node.getFromState();
             if (StringUtils.isNotBlank(fromState)) {
@@ -164,39 +62,33 @@ public class StateGraph {
             }
 
             switch (node.getNodeType()) {
-                case "ACTION" -> {
-                    var actionDetail = node.getDetail();
-                    if (actionDetail != null) {
-                        var actionType = actionDetail.get(ActionNode.ACTION_TYPE);
-
-                        if (ActionNode.ActionType.LLM_AGENT.equals(actionType)) {
-                            var agentName = actionDetail.get(AgentNode.AGENT_NAME);
-
-                            var agentNode = new AgentNode();
-                            agentNode.setId(node.getNodeId());
-                            agentNode.setLabel(agentName);
-                            agentNode.setDescription(node.getNodeName());
-                            nodes.add(agentNode);
-                        }
+                case ACTION -> {
+                    var actionName = node.getActionName();
+                    if ("LLM_AGENT".equals(actionName)) {
+                        var agentNode = new AgentNode();
+                        agentNode.setId(node.getNodeId());
+                        agentNode.setLabel(node.getNodeName());
+                        agentNode.setDescription(node.getNodeName());
+                        nodes.add(agentNode);
                     }
                 }
-                case "EDGE" -> {
+                case EDGE -> {
                     continue;
                 }
-                case "START" -> {
-                    nodes.add(StateGraph.StartNode.builder()
+                case START -> {
+                    nodes.add(StartNode.builder()
                             .id(node.getNodeId())
                             .label(node.getNodeName())
                             .build());
                 }
-                case "END" -> {
-                    nodes.add(StateGraph.EndNode.builder()
+                case END -> {
+                    nodes.add(EndNode.builder()
                             .id(node.getNodeId())
                             .label(node.getNodeName())
                             .build());
                 }
-                case "CONDITION" -> {
-                    nodes.add(StateGraph.ConditionNode.builder()
+                case CONDITION -> {
+                    nodes.add(ConditionNode.builder()
                             .id(node.getNodeId())
                             .label(node.getNodeName())
                             .build());
@@ -205,7 +97,7 @@ public class StateGraph {
         }
 
         var uniqueEdges = new HashMap<String, Edge>();
-        var nodeById = new HashMap<String, StateMachineControlEntity.StateFlow>();
+        var nodeById = new HashMap<String, StateFlow>();
         stateAnticipators.forEach((state, node) -> {
             var sourceNode = stateProducers.get(state);
             if (sourceNode == null) {
@@ -230,7 +122,7 @@ public class StateGraph {
      * The statemachine has EDGE node type, to facilitate the transition of state, we need to remove the EDGE node. And link the prior and next node.
      * The EDGE node id should be `${sourceId}-${targetId}`.
      */
-    private static void purifyEdges(List<Edge> edges, Map<String, StateMachineControlEntity.StateFlow> nodesById) {
+    private static void purifyEdges(List<Edge> edges, Map<String, StateFlow> nodesById) {
         var pured = true;
         for (var edge : edges) {
             var targetNode = nodesById.get(edge.getTarget());
