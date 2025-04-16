@@ -1,9 +1,10 @@
 package io.github.shangor.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.model.Media;
 import org.springframework.http.MediaType;
 
-
+@Slf4j
 public class IntegrationUtils {
     private IntegrationUtils() {}
 
@@ -21,5 +22,23 @@ public class IntegrationUtils {
 
         // 创建 Media 对象
         return Media.builder().data(data).mimeType(MediaType.parseMediaType(mimeType)).build();
+    }
+
+    public static String convertMediaToDataUrl(Media media) {
+        if (media == null) {
+            return null;
+        } else {
+            String mimeType = media.getMimeType().toString();
+            var obj = media.getData();
+            if (obj instanceof byte[] data) {
+                String base64Data = java.util.Base64.getEncoder().encodeToString(data);
+                return "data:" + mimeType + ";base64," + base64Data;
+            } else if (obj instanceof String data) {
+                return "data:" + mimeType + ";base64," + data;
+            } else {
+                log.error("Unsupported media type: {}", media.getMimeType());
+                return null;
+            }
+        }
     }
 }

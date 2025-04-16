@@ -37,7 +37,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.ai.document.Document;
 
 @RestController
-@CrossOrigin(origins = {"*"})
 @Slf4j
 public class OllamaProxyController {
     @Resource
@@ -75,7 +74,7 @@ public class OllamaProxyController {
     /**
      * Will only return as text-stream.
      */
-    @PostMapping("/ollama/chat-rag")
+    @PostMapping("/api/chat-rag")
     public Flux<ServerSentEvent<String>> chatWithRag(@RequestBody String requestText) {
         LlmCompletionFunc.Options options = new LlmCompletionFunc.Options();
         options.setStream(true);
@@ -156,7 +155,7 @@ public class OllamaProxyController {
         return res;
     }
 
-    @PostMapping("/ollama/chat")
+    @PostMapping("/api/chat")
     public Flux<ServerSentEvent<String>> chat(@RequestBody String requestText) {
         LlmCompletionFunc.Options options = new LlmCompletionFunc.Options();
         options.setStream(true);

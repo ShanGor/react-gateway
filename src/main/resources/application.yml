@@ -37,7 +37,7 @@ spring:
     ollama:
       chat:
         model: qwen2.5:7b # llama3.2-vision
-      base-url: http://localhost:11434
+      base-url: http://double:11434
       embedding:
         model: bge-m3
         options:
@@ -60,7 +60,7 @@ gateway:
 
 ai:
   ollama:
-    url: http://localhost:11434
+    url: http://double:11434
 
 cors:
   allowed-origin: http://localhost:5173

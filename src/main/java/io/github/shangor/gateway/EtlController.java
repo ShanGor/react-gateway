@@ -39,7 +39,6 @@ import java.util.List;
 
 @RestController
 @Slf4j
-@CrossOrigin(origins = {"*"})
 public class EtlController {
     private final CustomAiMcp config;
 
