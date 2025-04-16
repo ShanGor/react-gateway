@@ -87,6 +87,8 @@ public class AgentNode extends ActionNode {
             var text = context.getInputText();
             if (StringUtils.isNotBlank(text)) {
                 text = agentConfig.getUserPrompt().replaceFirst("\\{\\s*\\{inputText\\s*}}", text);
+            } else {
+                text = agentConfig.getUserPrompt();
             }
             if (context.getImages() != null && !context.getImages().isEmpty()) {
                 var medias = context.getImages().stream().map(IntegrationUtils::convertDataUrlToMedia).toList();
