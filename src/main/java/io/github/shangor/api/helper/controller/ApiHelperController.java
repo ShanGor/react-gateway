@@ -4,12 +4,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.shangor.api.helper.db.RequestEntity;
 import io.github.shangor.api.helper.db.RequestRepository;
+import io.github.shangor.api.helper.pojo.ProxyRequest;
 import io.github.shangor.api.helper.pojo.RequestTree;
 import jakarta.annotation.Resource;
+import org.apache.hc.core5.http.io.support.ClassicRequestBuilder;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import reactor.core.publisher.Flux;
+
 import java.util.Collection;
 import java.util.LinkedList;
 
@@ -44,6 +52,32 @@ public class ApiHelperController {
         req.setId(id);
         req.setContent(objectMapper.writeValueAsString(requestTree));
         return requestRepo.save(req);
+    }
+
+    @PostMapping("/api/request-proxy")
+    public void proxyRequest(@RequestBody String body, ServerHttpResponse resp) throws IOException {
+        var req = objectMapper.readValue(body, ProxyRequest.class);
+
+        try(var httpclient = HttpClients.createDefault()) {
+            var builder = ClassicRequestBuilder.create(req.getMethod());
+            if (req.getHeaders() != null) {
+                req.getHeaders().forEach(builder::addHeader);
+            }
+            builder.setUri(req.getUrl());
+
+            httpclient.execute(builder.build(), response -> {
+                resp.setRawStatusCode(response.getCode());
+                for(var header : response.getHeaders()) {
+                    resp.getHeaders().add(header.getName(), header.getValue());
+                }
+                var stream = response.getEntity().getContent();
+                Flux<DataBuffer> dbf = DataBufferUtils.readInputStream(()->stream, resp.bufferFactory(), 4096);
+                resp.writeAndFlushWith(Flux.just(dbf)).subscribe();
+                return null;
+            });
+        }
+
+
     }
 
     @DeleteMapping("/api/requests/{id}")
