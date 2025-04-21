@@ -61,6 +61,12 @@ public class StateGraph {
                 input.getRight().forEach(possibleState -> stateProducers.put(possibleState, node));
             }
 
+            if (node.getOtherStates() != null && !node.getOtherStates().isEmpty()) {
+                for (var state : node.getOtherStates()) {
+                    stateProducers.put(state, node);
+                }
+            }
+
             switch (node.getNodeType()) {
                 case ACTION -> {
                     var actionName = node.getActionName();

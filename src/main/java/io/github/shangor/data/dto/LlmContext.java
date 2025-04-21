@@ -10,11 +10,6 @@ import java.util.List;
 @Data
 @Slf4j
 public class LlmContext {
-    /**
-     * Optional error message
-     */
-    private String error;
-
     private String inputText;
     private List<String> images;
     private List<String> textDocs;

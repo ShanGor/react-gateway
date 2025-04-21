@@ -5,6 +5,7 @@ import io.github.shangor.data.dto.LlmContext;
 import io.github.shangor.data.dto.LlmUsage;
 import io.github.shangor.service.LlmAgentService;
 import io.github.shangor.statemachine.state.ActionNode;
+import io.github.shangor.statemachine.state.NodeStatus;
 import io.github.shangor.util.IntegrationUtils;
 import io.micrometer.common.util.StringUtils;
 import lombok.*;
@@ -50,14 +51,17 @@ public class AgentNode extends ActionNode {
      * @return a new context
      */
     @Override
-    public String action(Param input) {
+    public Output action(Param input) {
         try {
             LlmContext context = LlmContext.from(input.getContext());
+            if (context == null) {
+                context = new LlmContext();
+            }
             var node = input.getConfig();
             var opt = AgentConfig.fromConfig(node);
             if (opt.isEmpty()) {
                 log.error("Failed to get agent config: {}", node);
-                return input.getContext();
+                return Output.builder().overriddenStatus(NodeStatus.FAILED).extraMessage("Failed to get agent config").build();
             }
             var agentConfig = opt.get();
 
@@ -110,6 +114,7 @@ public class AgentNode extends ActionNode {
             if (medias != null && !medias.isEmpty()) {
                 medias.forEach(media -> images.add(IntegrationUtils.convertMediaToDataUrl(media)));
             }
+
             chatHistory.add(LlmContext.Message.builder().role("user")
                     .images(context.getImages())
                     .text(text)
@@ -121,7 +126,7 @@ public class AgentNode extends ActionNode {
             context.setChatHistory(chatHistory);
             context.setImages(Collections.emptyList());
             context.setTextDocs(Collections.emptyList());
-            return context.toString();
+            return Output.builder().context(context.toString()).build();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
