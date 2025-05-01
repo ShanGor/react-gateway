@@ -25,7 +25,7 @@ public class WebConfig implements WebFluxConfigurer {
 
             registry.addMapping("/api/**")
                     .allowedOrigins(corsAllowedOrigin)
-                    .allowedMethods("GET", "OPTIONS", "POST", "PUT", "DELETE")
+                    .allowedMethods("GET", "OPTIONS", "POST", "PUT", "DELETE", "PATCH")
                     .allowCredentials(true);
         }
     }
