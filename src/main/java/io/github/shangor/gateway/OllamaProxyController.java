@@ -14,7 +14,7 @@ import io.github.shangor.util.GenUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -98,12 +98,13 @@ public class OllamaProxyController {
         }
 
         var requestId = UUID.randomUUID().toString();
+        var adviser = QuestionAnswerAdvisor.builder(vectorStore).searchRequest(SearchRequest.builder().topK(chatRequest.getOptions().getRagTopK()).build()).build();
 
         var cancelDisposable = Schedulers.newSingle(requestId);
         requestPool.put(requestId, cancelDisposable);
         return chatClientBuilder.defaultOptions(ChatOptions.builder().model(options.getModel()).build()).build()
                 .prompt()
-                .advisors(new QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(chatRequest.getOptions().getRagTopK()).build()))
+                .advisors(adviser)
                 .messages(messages).stream().chatResponse()
                 .cancelOn(cancelDisposable)
                 .doFinally(signal -> clearRequest(requestId))

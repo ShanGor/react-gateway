@@ -1,10 +1,10 @@
 package io.github.shangor.config;
 
 import io.micrometer.observation.ObservationRegistry;
-import org.springframework.ai.autoconfigure.ollama.OllamaChatProperties;
-import org.springframework.ai.autoconfigure.ollama.OllamaConnectionDetails;
-import org.springframework.ai.autoconfigure.ollama.OllamaInitializationProperties;
 import org.springframework.ai.chat.observation.ChatModelObservationConvention;
+import org.springframework.ai.model.ollama.autoconfigure.OllamaChatProperties;
+import org.springframework.ai.model.ollama.autoconfigure.OllamaConnectionDetails;
+import org.springframework.ai.model.ollama.autoconfigure.OllamaInitializationProperties;
 import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.ollama.CustomOllamaChatModel;
 import org.springframework.ai.ollama.api.CustomOllamaApi;

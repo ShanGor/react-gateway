@@ -30,6 +30,7 @@ public class CustomOllamaApi extends OllamaApi {
 
         this.webClient = webClientBuilder.baseUrl(baseUrl).defaultHeaders(defaultHeaders).build();
     }
+
     public Flux<ChatResponse> streamingChat(ChatRequest chatRequest, Consumer<ChatResponse> streamObserver) {
         Assert.notNull(chatRequest, REQUEST_BODY_NULL_ERROR);
         Assert.isTrue(chatRequest.stream(), "Request must set the stream property to true.");

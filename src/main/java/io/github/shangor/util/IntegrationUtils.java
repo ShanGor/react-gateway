@@ -1,8 +1,8 @@
 package io.github.shangor.util;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.model.Media;
 import org.springframework.http.MediaType;
+import org.springframework.ai.content.Media;
 
 @Slf4j
 public class IntegrationUtils {

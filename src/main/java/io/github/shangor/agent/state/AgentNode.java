@@ -32,8 +32,9 @@ public class AgentNode extends ActionNode {
         var toolSet = new HashSet<>(tools);
         var t = new HashMap<String, ToolCallback>();
         for(var tool : provider.getToolCallbacks()) {
-            if (toolSet.contains(tool.getName())) {
-                t.put(tool.getName(), (ToolCallback) tool);
+            var toolName = tool.getToolDefinition().name();
+            if (toolSet.contains(toolName)) {
+                t.put(toolName, (ToolCallback) tool);
             }
         }
 

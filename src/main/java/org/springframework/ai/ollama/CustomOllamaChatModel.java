@@ -14,14 +14,14 @@ import org.springframework.ai.chat.observation.ChatModelObservationDocumentation
 import org.springframework.ai.chat.observation.DefaultChatModelObservationConvention;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.ModelOptionsUtils;
-import org.springframework.ai.model.tool.ToolCallingChatOptions;
-import org.springframework.ai.model.tool.ToolCallingManager;
-import org.springframework.ai.model.tool.ToolExecutionResult;
+import org.springframework.ai.model.tool.*;
 import org.springframework.ai.ollama.api.CustomOllamaApi;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.ollama.api.common.OllamaApiConstants;
 import org.springframework.ai.ollama.management.ModelManagementOptions;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Map;
@@ -32,18 +32,32 @@ public class CustomOllamaChatModel extends OllamaChatModel {
     private static final ChatModelObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultChatModelObservationConvention();
 
     private final CustomOllamaApi chatApi;
+
+    private final ChatModelObservationConvention observationConvention = DEFAULT_OBSERVATION_CONVENTION;
+
+
     private final ObservationRegistry observationRegistry;
 
+    private final ToolExecutionEligibilityPredicate toolExecutionEligibilityPredicate;
     private final ToolCallingManager toolCallingManager;
 
-    private ChatModelObservationConvention observationConvention = DEFAULT_OBSERVATION_CONVENTION;
-
     public CustomOllamaChatModel(CustomOllamaApi ollamaApi, OllamaOptions defaultOptions, ToolCallingManager toolCallingManager, ObservationRegistry observationRegistry, ModelManagementOptions modelManagementOptions) {
-        super(ollamaApi, defaultOptions, toolCallingManager, observationRegistry, modelManagementOptions);
+        this(ollamaApi, defaultOptions, toolCallingManager, observationRegistry, modelManagementOptions,
+                new DefaultToolExecutionEligibilityPredicate());
+    }
+
+
+    public CustomOllamaChatModel(CustomOllamaApi ollamaApi, OllamaOptions defaultOptions, ToolCallingManager toolCallingManager,
+                           ObservationRegistry observationRegistry, ModelManagementOptions modelManagementOptions,
+                           ToolExecutionEligibilityPredicate toolExecutionEligibilityPredicate) {
+        super(ollamaApi, defaultOptions, toolCallingManager,
+                observationRegistry, modelManagementOptions, toolExecutionEligibilityPredicate);
         this.chatApi = ollamaApi;
         this.observationRegistry = observationRegistry;
+        this.toolExecutionEligibilityPredicate = toolExecutionEligibilityPredicate;
         this.toolCallingManager = toolCallingManager;
     }
+
 
     public Flux<ChatResponse> stream(Prompt prompt, Consumer<OllamaApi.ChatResponse> streamObserver) {
         // Before moving any further, build the final request Prompt,
@@ -58,8 +72,7 @@ public class CustomOllamaChatModel extends OllamaChatModel {
 
             final ChatModelObservationContext observationContext = ChatModelObservationContext.builder()
                     .prompt(prompt)
-                    .provider(OllamaApi.PROVIDER_NAME)
-                    .requestOptions(prompt.getOptions())
+                    .provider(OllamaApiConstants.PROVIDER_NAME)
                     .build();
 
             Observation observation = ChatModelObservationDocumentation.CHAT_MODEL_OPERATION.observation(
@@ -98,18 +111,22 @@ public class CustomOllamaChatModel extends OllamaChatModel {
 
             // @formatter:off
             Flux<ChatResponse> chatResponseFlux = chatResponse.flatMap(response -> {
-                        if (ToolCallingChatOptions.isInternalToolExecutionEnabled(prompt.getOptions()) && response.hasToolCalls()) {
-                            var toolExecutionResult = this.toolCallingManager.executeToolCalls(prompt, response);
-                            if (toolExecutionResult.returnDirect()) {
-                                // Return tool execution result directly to the client.
-                                return Flux.just(ChatResponse.builder().from(response)
-                                        .generations(ToolExecutionResult.buildGenerations(toolExecutionResult))
-                                        .build());
-                            } else {
-                                // Send the tool execution result back to the model.
-                                return this.internalStream(new Prompt(toolExecutionResult.conversationHistory(), prompt.getOptions()),
-                                        response, streamObserver);
-                            }
+                        if (this.toolExecutionEligibilityPredicate.isToolExecutionRequired(prompt.getOptions(), response)) {
+                            // FIXME: bounded elastic needs to be used since tool calling
+                            //  is currently only synchronous
+                            return Flux.defer(() -> {
+                                var toolExecutionResult = this.toolCallingManager.executeToolCalls(prompt, response);
+                                if (toolExecutionResult.returnDirect()) {
+                                    // Return tool execution result directly to the client.
+                                    return Flux.just(ChatResponse.builder().from(response)
+                                            .generations(ToolExecutionResult.buildGenerations(toolExecutionResult))
+                                            .build());
+                                } else {
+                                    // Send the tool execution result back to the model.
+                                    return this.internalStream(new Prompt(toolExecutionResult.conversationHistory(), prompt.getOptions()),
+                                            response, streamObserver);
+                                }
+                            }).subscribeOn(Schedulers.boundedElastic());
                         }
                         else {
                             return Flux.just(response);
