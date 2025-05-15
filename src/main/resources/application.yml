@@ -60,7 +60,7 @@ gateway:
 
 ai:
   ollama:
-    url: http://localhost:11434
+    url: http://${OLLAMA_HOST:localhost}:11434
 
 cors:
   allowed-origin: http://localhost:5173
