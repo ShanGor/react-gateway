@@ -6,6 +6,7 @@ import com.fasterxml.uuid.Generators;
 import io.github.shangor.config.CustomAiMcp;
 import io.github.shangor.data.entity.UploadFileRecordEntity;
 import io.github.shangor.data.repo.UploadFileRecordRepository;
+import io.github.shangor.service.RagService;
 import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.Resource;
 import liquibase.util.MD5Util;
@@ -36,6 +37,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Consumer;
 
 @RestController
 @Slf4j
@@ -53,6 +55,9 @@ public class EtlController {
     private final static long BLOCK_SIZE = 8 * 1024;
     @Autowired
     private PgVectorStore vectorStore;
+
+    @Resource
+    private RagService ragService;
 
     public EtlController(CustomAiMcp config) {
         this.config = config;
@@ -90,6 +95,8 @@ public class EtlController {
         private String contentBase64;
     }
 
+   
+
     @PostMapping("/api/docs/convert/{id}")
     public Mono<?> convertRag(@PathVariable String id) {
         return Mono.create(sink -> Thread.ofVirtual().start(() -> {
@@ -105,44 +112,16 @@ public class EtlController {
                     sink.success(ResponseEntity.status(404).body("File cannot be found with the given path, might got data damage issue."));
                     return;
                 }
-
-                if (".pdf".equalsIgnoreCase(o.getFileType())) {
-                    var cfg = PdfDocumentReaderConfig.builder()
-                            .withPageTopMargin(0)
-                            .withPageExtractedTextFormatter(ExtractedTextFormatter.builder()
-                                    .withLeftAlignment(true)
-                                    .withNumberOfTopTextLinesToDelete(0)
-                                    .build())
-                            .withPagesPerDocument(1)
-                            .build();
-
-                    DocumentReader pdfReader;
-                    try {
-                        pdfReader = new ParagraphPdfDocumentReader(new FileSystemResource(o.getFilePath()), cfg);
-                    } catch (IllegalArgumentException e) {
-                        pdfReader = new PagePdfDocumentReader(new FileSystemResource(o.getFilePath()), cfg);
-                    }
-
-                    var docs = pdfReader.read();
-                    docs.forEach(d -> {
-                        var text = d.getText();
-                        if (StringUtils.isBlank(text)) return;
-                        var docId = Generators.timeBasedEpochGenerator().generate().toString();
-                        var meta = new HashMap<>(d.getMetadata());
-                        meta.put("fileOriginalName", o.getFileName());
-                        meta.put("fileRecordId", o.getId());
-                        var doc = new org.springframework.ai.document.Document(docId, text.trim(), meta);
-                        vectorStore.doAdd(List.of(doc));
-                    });
-                    o.setProcessStatus("converted");
-                    sink.success(uploadRepo.save(o));
-                } else {
-                    sink.success(ResponseEntity.status(400).body("Unsupported file type"));
+                // use ragService to convert pdf to text
+                var response = ragService.convertPdfToText(id);
+                if (!response.isSuccess()) {
+                    sink.success(ResponseEntity.status(response.statusCode()).body(response.message()));
+                    return;
                 }
+                sink.success(response.data());
             } catch (Exception e) {
                 sink.error(e);
             }
-
         }));
     }
 
@@ -218,8 +197,9 @@ public class EtlController {
             return ResponseEntity.status(400).body("MD5 mismatch");
         }
         o.setProcessStatus("uploaded");
-
-        return ResponseEntity.ok(uploadRepo.save(o));
+        uploadRepo.save(o);
+        
+        return ResponseEntity.ok(o);
     }
 
     @DeleteMapping("/api/docs/{id}")
