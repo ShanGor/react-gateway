@@ -97,7 +97,8 @@ public class AgentNode extends ActionNode {
             }
             if (context.getImages() != null && !context.getImages().isEmpty()) {
                 var medias = context.getImages().stream().map(IntegrationUtils::convertDataUrlToMedia).toList();
-                userMessage = new UserMessage(text, medias);
+
+                userMessage = UserMessage.builder().text(text).media(medias).build();
             } else {
                 userMessage = new UserMessage(text);
             }
