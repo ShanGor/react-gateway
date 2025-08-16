@@ -15,7 +15,7 @@
 	<description>Use Java to provide a gateway for SPA</description>
 	<properties>
 		<java.version>21</java.version>
-		<spring-ai.version>1.0.0</spring-ai.version>
+		<spring-ai.version>1.0.1</spring-ai.version>
 		<spring-boot.version>3.4.5</spring-boot.version>
 		<lombok.version>1.18.36</lombok.version>
 	</properties>
@@ -102,6 +102,12 @@
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-pdf-document-reader</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>io.micrometer</groupId>
+					<artifactId>context-propagation</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<!-- End of Spring AI -->
 
