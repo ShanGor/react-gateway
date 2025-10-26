@@ -1,16 +1,14 @@
 spring:
   application:
-    name: react-gateway
+    name: ai-chat-backend
   webflux:
     multipart:
       max-parts: 1
       max-disk-usage-per-part: 10MB
       max-in-memory-size: 10MB
       max-headers-size: 2MB
-  codec:
-    max-in-memory-size: 10MB
-  autoconfigure:
-    exclude: org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+#  autoconfigure:
+#    exclude: org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
 
   datasource:
     url: jdbc:postgresql://localhost:15432/r1?reWriteBatchedInserts=true&stringtype=unspecified
@@ -34,20 +32,25 @@ spring:
     change-log: classpath:db/changelog/master.yaml
     enabled: false
   ai:
-    ollama:
+    openai:
+      api-key: ${OPENAI_API_KEY}
       chat:
-        model: qwen2.5:7b # llama3.2-vision
-      base-url: ${ai.ollama.url}
-      embedding:
-        model: bge-m3
         options:
-          max-tokens: 8192
+            model: qwen3:4b # llama3.2-vision
+      base-url: ${OPENAI_HOST}
+      embedding:
+        options:
+          model: bge-m3
+          dimensions: 8192
     vectorstore:
       pgvector:
         index-type: HNSW
         distance-type: COSINE_DISTANCE
         dimensions: 1024
         max-document-batch-size: 10000 # Optional: Maximum number of documents per batch
+  http:
+    codecs:
+      max-in-memory-size: 10MB
 
 server:
   compression:
@@ -57,10 +60,6 @@ gateway:
   static-file-path: ${STATIC_FILE_PATH}
   default-file: index.html
   spa-path: /ui
-
-ai:
-  ollama:
-    url: http://${OLLAMA_HOST:localhost}:11434
 
 cors:
   allowed-origin: http://localhost:5173

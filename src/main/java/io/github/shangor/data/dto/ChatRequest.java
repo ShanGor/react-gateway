@@ -1,17 +1,17 @@
 package io.github.shangor.data.dto;
 
-import io.github.shangor.llm.pojo.OpenAiCompletionRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.ai.openai.api.OpenAiApi;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatRequest {
-    private OpenAiCompletionRequest request;
+    private OpenAiApi.ChatCompletionRequest request;
     private ChatOptions options;
 
     @Data
