@@ -9,7 +9,9 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -35,7 +37,7 @@ public class LlmRestClientConfig {
     RestClient.Builder llmRestClient(CustomAiMcp ai) {
         var responseTimeout = ai.getAi().getResponseTimeout();
         log.info("llmRestClient responseTimeout: {} seconds", responseTimeout.getSeconds());
-        HttpClient client = HttpClient.create()
+        HttpClient client = HttpClient.newConnection() // no connection pool
                 .responseTimeout(responseTimeout);
         ClientHttpRequestFactory factory = new ReactorClientHttpRequestFactory(client);
 
@@ -43,13 +45,14 @@ public class LlmRestClientConfig {
                 .requestFactory(factory);
     }
 
-    @Bean
+    @Bean("llmWebClient")
     WebClient.Builder llmWebClient(CustomAiMcp ai) {
         var responseTimeout = ai.getAi().getResponseTimeout();
         log.info("llmWebClient responseTimeout: {} seconds", responseTimeout.getSeconds());
-        HttpClient client = HttpClient.create()
+        HttpClient client = HttpClient.newConnection() // no connection pool
                 .responseTimeout(responseTimeout);
 
-        return WebClient.builder().clientConnector(new ReactorClientHttpConnector(client));
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(client));
     }
 }

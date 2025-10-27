@@ -8,7 +8,8 @@ spring:
       max-in-memory-size: 10MB
       max-headers-size: 2MB
 #  autoconfigure:
-#    exclude: org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+#    exclude: org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration
+  #    exclude: org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
 
   datasource:
     url: jdbc:postgresql://localhost:15432/r1?reWriteBatchedInserts=true&stringtype=unspecified
@@ -30,8 +31,23 @@ spring:
     user: rag
     password: rag
     change-log: classpath:db/changelog/master.yaml
-    enabled: false
+    enabled: true
   ai:
+    mcp:
+      server:
+        name: mcp-server
+        version: 1.0.0
+        streamable-http:
+          mcp-endpoint: /mcp
+        enabled: true
+        protocol: stateless
+        type: sync
+      client:
+        streamable-http:
+          connections:
+            server1:
+              url: http://localhost:${server.port:8080}
+
     openai:
       api-key: ${OPENAI_API_KEY}
       chat:

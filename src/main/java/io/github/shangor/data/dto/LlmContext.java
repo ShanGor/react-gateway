@@ -13,7 +13,7 @@ public class LlmContext {
     private String inputText;
     private List<String> images;
     private List<String> textDocs;
-    private LlmUsage usage;
+//    private LlmUsage usage;
 
     private List<Message> chatHistory;
 

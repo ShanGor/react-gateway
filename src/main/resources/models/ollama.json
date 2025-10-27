@@ -1,0 +1,82 @@
+{
+  "models": [{
+    "name": "gemma3:270m",
+    "type": "llm",
+    "description": "Google Gemma3 opensource series: gemma3:270m INT4",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "gemma3:270m-it-bf16",
+    "type": "llm",
+    "description": "Google Gemma3 opensource series: gemma3:270m",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "gpt-oss:latest",
+    "type": "llm",
+    "description": "GPT OSS series: 20b",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "qwen2.5:3b",
+    "type": "llm",
+    "description": "Qwen2.5 opensource series: 3b",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "qwen2.5:latest",
+    "type": "llm",
+    "description": "Qwen2.5 opensource series: 7b with int4 gguf",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "qwen3:4b",
+    "type": "llm",
+    "description": "Qwen3 opensource series: 4b",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "gemma3:4b",
+    "type": "llm",
+    "description": "Google Gemma3 opensource series: 4b",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "qwen3:8b",
+    "type": "llm",
+    "description": "Qwen3 opensource series: 8b",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "qwen2.5vl:latest",
+    "type": "llm",
+    "description": "Qwen2.5 opensource series: VL version",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "qwen2.5vl:32b",
+    "type": "llm",
+    "description": "Qwen2.5 opensource series: 32b",
+    "url": "http://localhost:11434/v1/chat/completions"
+  }, {
+    "name": "nomic-embed-text:latest",
+    "type": "embedding",
+    "description": "Embedding model provided by nomic, served by Ollama",
+    "url": "http://localhost:11434/v1/embeddings"
+  }, {
+    "name": "bge-m3:latest",
+    "type": "embedding",
+    "description": "Embedding model provided by bge, served by Ollama",
+    "url": "http://localhost:11434/v1/embeddings"
+  }],
+  "llm-template": {
+    "model": "$model",
+    "messages": "$messages",
+    "max_tokens": -1,
+    "stream": true,
+    "temperature": 1,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  "embedding-template": {
+    "model": "$model",
+    "input": "$inputs"
+  }
+}
+
+
+
+
+

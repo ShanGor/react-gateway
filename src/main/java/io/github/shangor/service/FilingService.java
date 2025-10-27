@@ -1,7 +1,8 @@
 package io.github.shangor.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.tool.annotation.Tool;
+import org.springaicommunity.mcp.annotation.McpTool;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -14,8 +15,9 @@ public class FilingService {
     /**
      * You can define as many parameters as you want.
      */
-    @Tool(description = "save a text file to file system")
-    public String saveTextToFile(String fileName, String text) {
+    @McpTool(name="saveTextToFile", description = "save a text file to file system")
+    public String saveTextToFile(@McpToolParam(description = "File name", required = true) String fileName,
+                                 @McpToolParam(description = "Text", required = true) String text) {
         log.info("Tooling request: saveTextToFile: fileName={}, context={}", fileName, text);
         try {
             Files.writeString(Paths.get("c:\\tmp", fileName), text);

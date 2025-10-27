@@ -6,7 +6,6 @@ import io.github.shangor.exception.UserException;
 import io.github.shangor.statemachine.util.ConcurrentUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -18,12 +17,9 @@ import java.util.Optional;
 public class LlmAgentService {
     public static LlmAgentService instance;
     private final LlmAgentRepository repo;
-    @Getter
-    private final ChatModel chatModel;
-    public LlmAgentService(LlmAgentRepository repo, ChatModel chatModel) {
+    public LlmAgentService(LlmAgentRepository repo) {
         log.info("LlmAgentService initialized");
         this.repo = repo;
-        this.chatModel = chatModel;
         instance = this;
     }
 

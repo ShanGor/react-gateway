@@ -12,15 +12,6 @@ import jakarta.annotation.Resource;
 import liquibase.util.MD5Util;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.document.DocumentReader;
-import org.springframework.ai.reader.ExtractedTextFormatter;
-import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
-import org.springframework.ai.reader.pdf.ParagraphPdfDocumentReader;
-import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -53,8 +44,6 @@ public class EtlController {
      * 512KB
      */
     private final static long BLOCK_SIZE = 8 * 1024;
-    @Autowired
-    private PgVectorStore vectorStore;
 
     @Resource
     private RagService ragService;
@@ -95,35 +84,35 @@ public class EtlController {
         private String contentBase64;
     }
 
-   
 
-    @PostMapping("/api/docs/convert/{id}")
-    public Mono<?> convertRag(@PathVariable String id) {
-        return Mono.create(sink -> Thread.ofVirtual().start(() -> {
-            try {
-                var opt = uploadRepo.findById(id);
-                if (opt.isEmpty()) {
-                    sink.success(ResponseEntity.status(404).body("Not found the file"));
-                    return;
-                }
-                var o = opt.get();
-                var path = Paths.get(o.getFilePath());
-                if (!Files.exists(path)) {
-                    sink.success(ResponseEntity.status(404).body("File cannot be found with the given path, might got data damage issue."));
-                    return;
-                }
-                // use ragService to convert pdf to text
-                var response = ragService.convertPdfToText(id);
-                if (!response.isSuccess()) {
-                    sink.success(ResponseEntity.status(response.statusCode()).body(response.message()));
-                    return;
-                }
-                sink.success(response.data());
-            } catch (Exception e) {
-                sink.error(e);
-            }
-        }));
-    }
+//
+//    @PostMapping("/api/docs/convert/{id}")
+//    public Mono<?> convertRag(@PathVariable String id) {
+//        return Mono.create(sink -> Thread.ofVirtual().start(() -> {
+//            try {
+//                var opt = uploadRepo.findById(id);
+//                if (opt.isEmpty()) {
+//                    sink.success(ResponseEntity.status(404).body("Not found the file"));
+//                    return;
+//                }
+//                var o = opt.get();
+//                var path = Paths.get(o.getFilePath());
+//                if (!Files.exists(path)) {
+//                    sink.success(ResponseEntity.status(404).body("File cannot be found with the given path, might got data damage issue."));
+//                    return;
+//                }
+//                // use ragService to convert pdf to text
+//                var response = ragService.convertPdfToText(id);
+//                if (!response.isSuccess()) {
+//                    sink.success(ResponseEntity.status(response.statusCode()).body(response.message()));
+//                    return;
+//                }
+//                sink.success(response.data());
+//            } catch (Exception e) {
+//                sink.error(e);
+//            }
+//        }));
+//    }
 
     @GetMapping("/api/docs")
     public Page<UploadFileRecordEntity> listDocs(@RequestParam(required = false, defaultValue = "0") int page,
@@ -198,7 +187,7 @@ public class EtlController {
         }
         o.setProcessStatus("uploaded");
         uploadRepo.save(o);
-        
+
         return ResponseEntity.ok(o);
     }
 
@@ -220,8 +209,8 @@ public class EtlController {
                 }
 
                 try {
-                    var filter = new FilterExpressionBuilder().eq("fileRecordId", id).build();
-                    vectorStore.delete(filter);
+//                    var filter = new FilterExpressionBuilder().eq("fileRecordId", id).build();
+//                    vectorStore.delete(filter);
                     uploadRepo.delete(o);
                     sink.success(ResponseEntity.ok("OK"));
                 } catch (Exception e) {

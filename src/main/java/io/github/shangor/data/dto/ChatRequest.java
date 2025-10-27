@@ -4,23 +4,23 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.ai.openai.api.OpenAiApi;
+
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatRequest {
-    private OpenAiApi.ChatCompletionRequest request;
-    private ChatOptions options;
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ChatOptions {
-        private boolean useRag;
-        private int ragTopK;
-        private int includeHistoryCount;
-    }
+    private String conversationId;
+    /**
+     * Default is null
+     */
+    private String agentId;
+    private String model;
+    private String prompt;
+    private List<String> referenceDocuments;
+    private List<String> mediaDataUrls;
+    private double temperature = 0.7;
+    private int maxCompletionTokens = 512;
 }
